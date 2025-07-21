@@ -7,9 +7,11 @@ import {
   type ParatextProject,
   type TrainTask,
   type Scripture,
+  type AlignTask,
 } from "../types";
 import { BackSvgIcon } from "../components/Icons";
 import { CreateTaskForm } from "../components/CreateTaskForm";
+import { NewDraftModal } from "../components/NewDraftModal";
 
 const formatDate = (dateStr: any) =>
   dateStr && new Date(dateStr).toLocaleString();
@@ -73,6 +75,77 @@ const DefaultTaskCard = ({ task }: { task: Task }) => {
   );
 };
 
+const AlignTaskCard = ({ task }: { task: AlignTask }) => {
+  const tryToGetAlignmentsOrEmpty = () => {
+    if (task.parameters.results) {
+      // find the top three filtered_align_score and return the src_project and filtered_align_score
+      // Get results array, sort by filtered_align_score descending, take top 3
+      const results = Array.isArray(task.parameters.results)
+        ? task.parameters.results
+        : [];
+      return results
+        .sort((a, b) => +b.filtered_align_score - +a.filtered_align_score)
+        .slice(0, 5)
+        .map(({ src_project, filtered_align_score }) => ({
+          src_project,
+          filtered_align_score,
+        }));
+    }
+    return [];
+  };
+  const resultSummary = tryToGetAlignmentsOrEmpty();
+
+  return (
+    <div
+      key={task.id}
+      className="bg-white dark:bg-slate-900 rounded-lg shadow-md p-6"
+    >
+      <div className="flex flex-row">
+        <div className="flex-1 text-sm text-slate-500 dark:text-slate-40 mr-4">
+          <div className="flex flex-row items-center">
+            <NavLink
+              className="text-xl font-bold text-violet-600 dark:text-violet-400 mb-1"
+              to={`/tasks/${task.id}`}
+            >
+              {task.kind}
+            </NavLink>
+            <span className="px-2 py-1 ml-2 text-xs bg-slate-100 rounded-full">
+              {task.status}
+            </span>
+          </div>
+          {"experiment_name" in task.parameters && (
+            <div className="flex flex-row items-center text-xs mb-2">
+              {task.parameters.experiment_name}
+            </div>
+          )}
+          <p>
+            <strong>Created:</strong> {formatDate(task.created_at)}
+          </p>
+          <p>
+            <strong>Started:</strong> {formatDate(task.started_at)}
+          </p>
+          <p>
+            <strong>Ended:</strong> {formatDate(task.ended_at)}
+          </p>
+        </div>
+        {resultSummary.length > 0 && (
+          <div className="flex-1 flex flex-col text-sm text-slate-500">
+            <h3 className="font-bold text-slate-600">Results Summary</h3>
+            <table>
+              {resultSummary.map(({ src_project, filtered_align_score }) => (
+                <tr>
+                  <td>{src_project}</td>
+                  <td>{filtered_align_score}</td>
+                </tr>
+              ))}
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const TrainTaskCard = ({
   task,
   drafts,
@@ -80,6 +153,8 @@ const TrainTaskCard = ({
   task: TrainTask;
   drafts: Draft[];
 }) => {
+  const [open, setOpen] = useState(false);
+  const [scripture, setScripture] = useState<Scripture | null>(null);
   const key = Object.keys(task.parameters.results || {})
     .sort(
       (a, b) =>
@@ -87,6 +162,14 @@ const TrainTaskCard = ({
         (+task.parameters.results![b]["BLEU"] || 0)
     )
     .at(-1);
+
+  useEffect(() => {
+    api.scriptures.getAll(task.parameters.target_scripture_file).then((s) => {
+      if (s.length > 0) {
+        setScripture(s[0]);
+      }
+    });
+  }, [task]);
 
   if (!key) {
     return <></>;
@@ -134,7 +217,24 @@ const TrainTaskCard = ({
             <strong>Ended:</strong> {formatDate(task.ended_at)}
           </p>
         </div>
-        <DraftsList drafts={drafts} />
+        <div className="flex-1 border-l border-slate-300 ml-4 pl-4 flex flex-col justify-between">
+          <DraftsList drafts={drafts} />
+          <button
+            className="mt-2 py-1 px-3 text-xs font-bold text-white rounded-full bg-violet-500 hover:bg-violet-600 active:scale-95 cursor-pointer"
+            onClick={() => setOpen(true)}
+            disabled={!scripture}
+          >
+            New Draft
+          </button>
+          {scripture && (
+            <NewDraftModal
+              open={open}
+              onClose={() => setOpen(false)}
+              task={task}
+              scripture={scripture}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
@@ -143,30 +243,20 @@ const TrainTaskCard = ({
 const DraftsList = ({ drafts }: { drafts: Draft[] }) => {
   if (drafts.length === 0) {
     return (
-      <div className="flex-1 border-l border-slate-300 ml-4 pl-4 flex items-center justify-center">
-        No Drafts
-      </div>
+      <div className="flex-1 flex items-center justify-center">No Drafts</div>
     );
   }
+
   return (
-    <div className="flex-1 border-l border-slate-300 space-y-4 pl-4">
+    <div>
       {groupDraftsBySourceText(drafts).map(({ source, drafts }) => (
         <div key={source}>
-          <h3 className="font-bold text-xs flex flex-row justify-center text-slate-400">
-            ~ {source} ~
+          <h3 className="font-bold text-sm justify-center text-violet-500 inline-block">
+            {source}:
           </h3>
-          <div>
-            {drafts.map((draft) => (
-              <>
-                <span
-                  key={JSON.stringify(draft)}
-                  className="font-bold text-violet-500"
-                >
-                  {draft.book_name}
-                </span>{" "}
-              </>
-            ))}
-          </div>
+          <span className="ml-2 text-xs">
+            {drafts.map((draft) => draft.book_name).join(" ")}
+          </span>
         </div>
       ))}
     </div>
@@ -330,6 +420,12 @@ export function ProjectDetails() {
                   )}
                 />
               );
+            }
+            else if (task.kind === "align") {
+              return <AlignTaskCard
+                  key={task.id}
+                  task={task}
+                />
             }
             return <DefaultTaskCard key={task.id} task={task} />;
           })}
