@@ -78,6 +78,24 @@ export const LangCodeSelector = ({
         });
 
         setLangCodeOptions(optionsWithCurrentValues);
+
+        // Notify parent of default values for any unset lang codes
+        const newValue = { ...value };
+        let hasChanges = false;
+        
+        optionsWithCurrentValues.forEach((option) => {
+          const currentValue = value[option.langCode];
+          const isUnset = currentValue === undefined || currentValue === "";
+          
+          if (isUnset && !option.isCustom && option.selectedValue) {
+            newValue[option.langCode] = option.selectedValue;
+            hasChanges = true;
+          }
+        });
+        
+        if (hasChanges) {
+          onChange(newValue);
+        }
       } catch (err) {
         setError("Failed to load language code options");
         console.error("Error fetching lang code options:", err);
