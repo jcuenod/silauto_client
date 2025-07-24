@@ -250,7 +250,7 @@ export const CreateTaskForm = ({
                 value={trainingCorpus}
                 onChange={(e) => setTrainingCorpus(e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md dark:bg-slate-800"
-                placeholder="e.g., NT or MAT-ACT;1CO"
+                placeholder="e.g., NT or GEN-DEU;-LEV;NT (note the use of semi-colons and `-XXX` for exclusions)"
               />
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 Leave blank for all
