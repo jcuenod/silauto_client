@@ -2,7 +2,11 @@ import { useState, useEffect, useMemo, type FormEvent } from "react";
 import { useParams } from "react-router";
 import { api } from "../api/apiClient";
 import { ScriptureSelector } from "./ScriptureSelector";
-import { LangCodeSelector } from "./LangCodeSelector";
+import { 
+  LangCodeSelector, 
+  type LangCodeOption, 
+  type SelectedValue 
+} from "./LangCodeSelector";
 import type {
   TaskKind,
   AlignTaskCreate,
@@ -56,9 +60,7 @@ export const CreateTaskForm = ({
 
   // Train task form state
   const [trainingCorpus, setTrainingCorpus] = useState<string>("");
-  const [langCodesMapping, setLangCodesMapping] = useState<
-    Record<string, string>
-  >({});
+  const [langCodeOptions, setLangCodeOptions] = useState<LangCodeOption[]>([]);
   const [
     selectedSourceScriptureFilesForTraining,
     setSelectedSourceScriptureFilesForTraining,
@@ -104,6 +106,86 @@ export const CreateTaskForm = ({
     fetchFormData();
   }, [projectId]);
 
+  // Update language code options when unique language codes change
+  useEffect(() => {
+    const fetchLangCodeOptions = async () => {
+      if (uniqueLangCodes.length === 0) {
+        setLangCodeOptions([]);
+        return;
+      }
+
+      try {
+        const optionsPromises = uniqueLangCodes.map(async (langCode) => {
+          try {
+            const options = await api.langCodes.getByLangCode(langCode);
+            const defaultSelection: SelectedValue = options.length > 0 
+              ? {
+                  isCustom: false,
+                  selectedValue: options[0],
+                  customValue: null,
+                }
+              : {
+                  isCustom: true,
+                  customValue: "",
+                  selectedValue: null,
+                };
+
+            return {
+              langCode,
+              displayName: langCode.toUpperCase(),
+              options,
+              selection: defaultSelection,
+            };
+          } catch (err) {
+            console.error(`Failed to fetch lang codes for ${langCode}:`, err);
+            return {
+              langCode,
+              displayName: langCode.toUpperCase(),
+              options: [],
+              selection: {
+                isCustom: true,
+                customValue: "",
+                selectedValue: null,
+              } as SelectedValue,
+            };
+          }
+        });
+
+        const resolvedOptions = await Promise.all(optionsPromises);
+        setLangCodeOptions(resolvedOptions);
+      } catch (err) {
+        console.error("Error fetching lang code options:", err);
+      }
+    };
+
+    fetchLangCodeOptions();
+  }, [uniqueLangCodes]);
+
+  // Helper function to convert langCodeOptions to the format expected by the API
+  const getLangCodesMapping = (): Record<string, string> => {
+    const mapping: Record<string, string> = {};
+    langCodeOptions.forEach((option) => {
+      const value = option.selection.isCustom 
+        ? option.selection.customValue 
+        : option.selection.selectedValue;
+      if (value) {
+        mapping[option.langCode] = value;
+      }
+    });
+    return mapping;
+  };
+
+  // Handler for language code selection changes
+  const handleLangCodeChange = (langCode: string, selection: SelectedValue) => {
+    setLangCodeOptions((prev) =>
+      prev.map((option) =>
+        option.langCode === langCode
+          ? { ...option, selection }
+          : option
+      )
+    );
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!projectId) return;
@@ -130,7 +212,7 @@ export const CreateTaskForm = ({
           project_id: projectId,
           training_corpus: trainingCorpus,
           source_scripture_files: selectedSourceScriptureFilesForTraining,
-          lang_codes: langCodesMapping,
+          lang_codes: getLangCodesMapping(),
         };
         console.log("Creating train task:", trainData);
         await api.tasks.createTrain(trainData);
@@ -141,7 +223,7 @@ export const CreateTaskForm = ({
       setSelectedSourceScriptureFilesForAlignment([]);
       setSelectedSourceScriptureFilesForTraining([]);
       setTrainingCorpus("");
-      setLangCodesMapping({});
+      setLangCodeOptions([]);
 
       onTaskCreated?.();
     } catch (err) {
@@ -273,9 +355,8 @@ export const CreateTaskForm = ({
                 Language Codes
               </label>
               <LangCodeSelector
-                langCodes={uniqueLangCodes}
-                value={langCodesMapping}
-                onChange={setLangCodesMapping}
+                langCodeOptions={langCodeOptions}
+                onChange={handleLangCodeChange}
               />
             </div>
           </div>
@@ -294,7 +375,7 @@ export const CreateTaskForm = ({
               (taskType === "align" &&
                 selectedSourceScriptureFilesForAlignment.length === 0) ||
               (taskType === "train" &&
-                Object.keys(langCodesMapping).length === 0)
+                Object.keys(getLangCodesMapping()).length === 0)
             }
             className="px-4 py-2 bg-violet-600 text-white font-semibold rounded-lg shadow-md hover:bg-violet-700 disabled:bg-slate-400 disabled:cursor-not-allowed"
           >

@@ -1,166 +1,64 @@
-import { useState, useEffect } from "react";
-import { api } from "../api/apiClient";
+export type CustomValue = {
+  isCustom: true;
+  customValue: string;
+  selectedValue: null;
+};
 
-interface LangCodeOption {
+export type SelectedOption = {
+  isCustom: false;
+  selectedValue: string;
+  customValue: null;
+};
+
+export type SelectedValue = CustomValue | SelectedOption;
+
+export interface LangCodeOption {
   langCode: string;
   displayName: string;
   options: string[];
-  selectedValue: string;
-  isCustom: boolean;
-  customValue: string;
+  selection: SelectedValue;
 }
 
 interface LangCodeSelectorProps {
-  langCodes: string[]; // Array of ISO codes like ["en", "id"]
-  value: Record<string, string>; // Current lang codes mapping
-  onChange: (langCodes: Record<string, string>) => void;
+  langCodeOptions: LangCodeOption[];
+  onChange: (langCode: string, selection: SelectedValue) => void;
 }
 
 export const LangCodeSelector = ({
-  langCodes,
-  value,
+  langCodeOptions,
   onChange,
 }: LangCodeSelectorProps) => {
-  const [langCodeOptions, setLangCodeOptions] = useState<LangCodeOption[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchLangCodeOptions = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        const uniqueLangCodes = [...new Set(langCodes)];
-        const optionsPromises = uniqueLangCodes.map(async (langCode) => {
-          try {
-            const options = await api.langCodes.getByLangCode(langCode);
-            return {
-              langCode,
-              displayName: langCode.toUpperCase(),
-              options,
-              selectedValue: options.length > 0 ? options[0] : "",
-              isCustom: false,
-              customValue: "",
-            };
-          } catch (err) {
-            console.error(`Failed to fetch lang codes for ${langCode}:`, err);
-            return {
-              langCode,
-              displayName: langCode.toUpperCase(),
-              options: [],
-              selectedValue: "custom",
-              isCustom: true,
-              customValue: "",
-            };
-          }
-        });
-
-        const resolvedOptions = await Promise.all(optionsPromises);
-
-        // Apply current values to the resolved options
-        const optionsWithCurrentValues = resolvedOptions.map((option) => {
-          const currentValue = value[option.langCode];
-          const hasValue = currentValue !== undefined && currentValue !== "";
-          const isValueInOptions =
-            hasValue && option.options.includes(currentValue);
-          const isCustomValue = hasValue && !isValueInOptions;
-
-          return {
-            ...option,
-            selectedValue: isCustomValue
-              ? "custom"
-              : currentValue ||
-                (option.options.length > 0 ? option.options[0] : ""),
-            isCustom: isCustomValue,
-            customValue: isCustomValue ? currentValue : "",
-          };
-        });
-
-        setLangCodeOptions(optionsWithCurrentValues);
-
-        // Notify parent of default values for any unset lang codes
-        const newValue = { ...value };
-        let hasChanges = false;
-        
-        optionsWithCurrentValues.forEach((option) => {
-          const currentValue = value[option.langCode];
-          const isUnset = currentValue === undefined || currentValue === "";
-          
-          if (isUnset && !option.isCustom && option.selectedValue) {
-            newValue[option.langCode] = option.selectedValue;
-            hasChanges = true;
-          }
-        });
-        
-        if (hasChanges) {
-          onChange(newValue);
-        }
-      } catch (err) {
-        setError("Failed to load language code options");
-        console.error("Error fetching lang code options:", err);
-      } finally {
-        setIsLoading(false);
-      }
+  const handleOptionSelect = (langCode: string, selectedValue: string) => {
+    const selection: SelectedValue = {
+      isCustom: false,
+      selectedValue,
+      customValue: null,
     };
+    onChange(langCode, selection);
+  };
 
-    if (langCodes.length > 0) {
-      fetchLangCodeOptions();
-    } else {
-      setLangCodeOptions([]);
-      setIsLoading(false);
-    }
-  }, [langCodes]);
-
-  const handleOptionChange = (langCode: string, selectedValue: string) => {
-    const updatedOptions = langCodeOptions.map((option) =>
-      option.langCode === langCode
-        ? {
-            ...option,
-            selectedValue:
-              selectedValue === "custom" ? "custom" : selectedValue,
-            isCustom: selectedValue === "custom",
-            customValue: selectedValue === "custom" ? option.customValue : "",
-          }
-        : option
-    );
-    setLangCodeOptions(updatedOptions);
-
-    // Update the parent component
-    const newValue = { ...value };
-    if (selectedValue === "custom") {
-      const option = updatedOptions.find((opt) => opt.langCode === langCode);
-      // Keep the existing custom value or use empty string if none exists
-      newValue[langCode] = option?.customValue || "";
-    } else {
-      newValue[langCode] = selectedValue;
-    }
-    onChange(newValue);
+  const handleCustomSelect = (langCode: string) => {
+    const currentOption = langCodeOptions.find(opt => opt.langCode === langCode);
+    const customValue = currentOption?.selection.isCustom 
+      ? currentOption.selection.customValue 
+      : "";
+    
+    const selection: SelectedValue = {
+      isCustom: true,
+      customValue,
+      selectedValue: null,
+    };
+    onChange(langCode, selection);
   };
 
   const handleCustomValueChange = (langCode: string, customValue: string) => {
-    const updatedOptions = langCodeOptions.map((option) =>
-      option.langCode === langCode ? { ...option, customValue } : option
-    );
-    setLangCodeOptions(updatedOptions);
-
-    // Update the parent component
-    const newValue = { ...value };
-    newValue[langCode] = customValue;
-    onChange(newValue);
+    const selection: SelectedValue = {
+      isCustom: true,
+      customValue,
+      selectedValue: null,
+    };
+    onChange(langCode, selection);
   };
-
-  if (isLoading) {
-    return (
-      <div className="p-4 text-center text-slate-500 dark:text-slate-400">
-        Loading language code options...
-      </div>
-    );
-  }
-
-  if (error) {
-    return <div className="p-4 text-center text-red-500">{error}</div>;
-  }
 
   if (langCodeOptions.length === 0) {
     return (
@@ -184,9 +82,9 @@ export const LangCodeSelector = ({
               <button
                 key={optionValue}
                 type="button"
-                onClick={() => handleOptionChange(option.langCode, optionValue)}
+                onClick={() => handleOptionSelect(option.langCode, optionValue)}
                 className={`px-3 py-2 text-sm font-medium rounded-md border transition-colors ${
-                  !option.isCustom && option.selectedValue === optionValue
+                  !option.selection.isCustom && option.selection.selectedValue === optionValue
                     ? "bg-blue-500 text-white border-blue-500 hover:bg-blue-600"
                     : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700"
                 }`}
@@ -196,9 +94,9 @@ export const LangCodeSelector = ({
             ))}
             <button
               type="button"
-              onClick={() => handleOptionChange(option.langCode, "custom")}
+              onClick={() => handleCustomSelect(option.langCode)}
               className={`px-3 py-2 text-sm font-medium rounded-md border transition-colors ${
-                option.isCustom
+                option.selection.isCustom
                   ? "bg-blue-500 text-white border-blue-500 hover:bg-blue-600"
                   : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700"
               }`}
@@ -208,10 +106,10 @@ export const LangCodeSelector = ({
           </div>
 
           {/* Custom Input */}
-          {option.isCustom && (
+          {option.selection.isCustom && (
             <input
               type="text"
-              value={option.customValue}
+              value={option.selection.customValue}
               onChange={(e) =>
                 handleCustomValueChange(option.langCode, e.target.value)
               }

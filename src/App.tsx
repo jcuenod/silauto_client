@@ -5,6 +5,7 @@ import { ProjectDetails } from "./pages/ProjectDetails";
 import { TasksPage } from "./pages/TasksPage";
 import { TaskDetails } from "./pages/TaskDetails";
 import { ScriptureList } from "./pages/ScriptureList";
+import { ScriptureDetails } from "./pages/ScriptureDetails";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path="tasks" element={<TasksPage />} />
           <Route path="tasks/:taskId" element={<TaskDetails />} />
           <Route path="scriptures" element={<ScriptureList />} />
+          <Route path="scriptures/:scriptureId" element={<ScriptureDetails />} />
           {/* You can add more routes here for specific projects/tasks */}
           {/* e.g., <Route path="projects/:projectId" element={<ProjectDetailPage />} /> */}
         </Route>

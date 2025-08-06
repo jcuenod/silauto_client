@@ -1,5 +1,5 @@
-// src/pages/ScriptureList.tsx
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router";
 import { api } from "../api/apiClient";
 import { type Scripture } from "../types";
 
@@ -8,6 +8,7 @@ export function ScriptureList() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchScriptures = async () => {
@@ -29,8 +30,6 @@ export function ScriptureList() {
     setSearchQuery(e.target.value);
   };
 
-  if (isLoading)
-    return <div className="text-center p-8">Loading scriptures...</div>;
   if (error) return <div className="text-center p-8 text-red-500">{error}</div>;
 
   return (
@@ -48,7 +47,12 @@ export function ScriptureList() {
         </div>
       </div>
 
-      <div className="bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden">
+      <div
+        className={
+          "bg-white dark:bg-slate-900 rounded-lg shadow-md overflow-hidden" +
+          (isLoading ? " opacity-50 pointer-events-none" : "")
+        }
+      >
         <table className="w-full text-left">
           <thead className="bg-slate-50 dark:bg-slate-800">
             <tr>
@@ -71,32 +75,35 @@ export function ScriptureList() {
               scriptures.map((scripture) => (
                 <tr
                   key={scripture.id}
-                  className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  className="border-b border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                  onClick={() => navigate(`/scriptures/${scripture.id}`)}
                 >
-                  <td className="p-4 font-medium text-slate-900 dark:text-slate-100">
-                    {scripture.name}
-                  </td>
+                  <td className="p-4">{scripture.name}</td>
                   <td className="p-4 text-slate-700 dark:text-slate-300">
                     {scripture.lang_code}
                   </td>
                   <td className="p-4 text-slate-700 dark:text-slate-300">
-                    {scripture.stats?.details &&
-                    Object.keys(scripture.stats.details).length > 0 ? (
+                    {scripture.stats?.summary &&
+                    Object.keys(scripture.stats.summary).length > 0 ? (
                       <div className="text-sm">
-                        {Object.entries(scripture.stats.details)
-                          .slice(0, 3)
-                          .map(([key, value]) => (
-                            <div key={key} className="flex justify-between">
-                              <span className="capitalize">{key}:</span>
-                              <span className="font-mono">{value}</span>
-                            </div>
-                          ))}
-                        {Object.keys(scripture.stats.details).length > 3 && (
-                          <div className="text-slate-500 italic">
-                            +{Object.keys(scripture.stats.details).length - 3}{" "}
-                            more...
-                          </div>
-                        )}
+                        <div className="flex justify-between">
+                          <span className="capitalize">OT:</span>
+                          <span className="font-mono">
+                            {Math.round(
+                              scripture.stats.summary.old_testament * 100
+                            )}
+                            %
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="capitalize">NT:</span>
+                          <span className="font-mono">
+                            {Math.round(
+                              scripture.stats.summary.new_testament * 100
+                            )}
+                            %
+                          </span>
+                        </div>
                       </div>
                     ) : (
                       <span className="text-slate-500 italic">

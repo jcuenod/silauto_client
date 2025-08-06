@@ -97,6 +97,12 @@ export interface Scripture {
   path: string;
   stats: {
     details: { [key: string]: number };
+    summary: {
+      whole_bible: number;
+      old_testament: number;
+      new_testament: number;
+      deuterocanonical: number;
+    };
   };
 }
 

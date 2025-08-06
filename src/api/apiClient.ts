@@ -169,6 +169,10 @@ const scriptures = {
           `/scriptures/?query=${query}&skip=${skip}&limit=${limit}`
         )
       : fetchClient<Scripture[]>(`/scriptures/?skip=${skip}&limit=${limit}`),
+  
+  // GET /scriptures/{id}
+  getById: (id: string) =>
+    fetchClient<Scripture[]>(`/scriptures/?query=${id}`),
 };
 
 const drafts = {
