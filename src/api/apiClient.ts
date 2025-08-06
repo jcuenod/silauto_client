@@ -18,7 +18,7 @@ const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
 const fetchClient = async <T>(
   url: string,
   options: RequestInit = {},
-  json: boolean = true,
+  json: boolean = true
 ): Promise<T> => {
   // const { headers, ...otherOptions } = options;
   const response = await fetch(`${baseURL}${url}`, {
@@ -56,13 +56,17 @@ const projects = {
 
   // GET /projects/{project_id}/download_drafts
   downloadDrafts: (projectId: string) =>
-    fetchClient<Response>(`/projects/${projectId}/download_drafts`, {
-      method: "GET",
-      mode: "cors",
-      headers: {
-        "Content-Type": "application/zip",
+    fetchClient<Response>(
+      `/projects/${projectId}/download_drafts`,
+      {
+        method: "GET",
+        mode: "cors",
+        headers: {
+          "Content-Type": "application/zip",
+        },
       },
-    }, false).then(async (response) => {
+      false
+    ).then(async (response) => {
       if (!response.ok) {
         alert("Failed to download drafts.");
         return;
@@ -79,18 +83,36 @@ const projects = {
     }),
 
   // POST /projects/
-  create: (files: FileList) => {
-    const formData = new FormData();
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const filePath = (file as any).webkitRelativePath || file.name;
-      formData.append("files", file, filePath);
-    }
-    return fetchClient(`/projects/`, {
-      method: "POST",
-      body: formData,
-    });
-  },
+  create: (files: FileList, onProgress: (percent: number) => void) =>
+    new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const filePath = (file as any).webkitRelativePath || file.name;
+        formData.append("files", file, filePath);
+      }
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const percent = Math.round((e.loaded / e.total) * 100);
+          onProgress(percent);
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(JSON.parse(xhr.responseText));
+        } else {
+          reject(new Error(`HTTP error! status: ${xhr.status}`));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error(xhr.statusText));
+
+      xhr.open("POST", `${baseURL}/projects/`);
+      xhr.send(formData);
+    }),
 
   // DELETE /projects/{project_id}
   delete: (projectId: string) =>
@@ -169,10 +191,9 @@ const scriptures = {
           `/scriptures/?query=${query}&skip=${skip}&limit=${limit}`
         )
       : fetchClient<Scripture[]>(`/scriptures/?skip=${skip}&limit=${limit}`),
-  
+
   // GET /scriptures/{id}
-  getById: (id: string) =>
-    fetchClient<Scripture[]>(`/scriptures/?query=${id}`),
+  getById: (id: string) => fetchClient<Scripture[]>(`/scriptures/?query=${id}`),
 };
 
 const drafts = {

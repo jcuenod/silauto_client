@@ -18,6 +18,7 @@ export function CreateProjectForm({
 }: CreateProjectFormProps) {
   const [files, setFiles] = useState<FileList | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -39,7 +40,9 @@ export function CreateProjectForm({
     setSuccess(null);
 
     try {
-      const response = await api.projects.create(files);
+      const response = await api.projects.create(files, (percent) => {
+        setUploadProgress(percent);
+      });
       setSuccess(
         `Project "${
           response instanceof Object && "name" in response
@@ -90,13 +93,22 @@ export function CreateProjectForm({
         </div>
         {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
         {success && <p className="text-green-500 text-sm mb-4">{success}</p>}
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="px-4 py-2 bg-violet-600 text-white font-semibold rounded-lg shadow-md hover:bg-violet-700 disabled:bg-slate-400 disabled:cursor-not-allowed"
-        >
-          {isSubmitting ? "Uploading..." : "Create Project"}
-        </button>
+        {files && files.length > 0 && (
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="px-4 py-2 bg-violet-600 text-white font-semibold rounded-lg shadow-md hover:bg-violet-700 disabled:bg-slate-400 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? "Uploading..." : "Create Project"}
+            <div className="ml-2 inline-block">
+              {uploadProgress > 0 && uploadProgress < 100 && (
+                <span className="text-sm text-slate-300">
+                  {uploadProgress}%
+                </span>
+              )}
+            </div>
+          </button>
+        )}
       </form>
     </div>
   );
