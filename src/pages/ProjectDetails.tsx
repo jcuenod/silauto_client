@@ -386,7 +386,7 @@ export function ProjectDetails() {
               className="ml-2 py-1 px-3 text-sm font-bold text-white rounded-full bg-violet-500 hover:bg-violet-600 active:scale-95 cursor-pointer disabled:bg-slate-300"
               onClick={async () => {
                 if (!projectId) return;
-                await api.projects.downloadDrafts(projectId);
+                await api.projects.downloadDrafts({ projectId });
               }}
               type="button"
             >

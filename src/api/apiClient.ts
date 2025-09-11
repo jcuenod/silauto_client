@@ -54,10 +54,25 @@ const projects = {
   getById: (projectId: string) =>
     fetchClient<ParatextProject>(`/projects/${projectId}`),
 
-  // GET /projects/{project_id}/download_drafts
-  downloadDrafts: (projectId: string) =>
-    fetchClient<Response>(
-      `/projects/${projectId}/download_drafts`,
+  // GET /drafts/download_drafts?project_id={projectId}
+  // GET /drafts/download_drafts?experiment_name={experimentName}
+  downloadDrafts: ({ projectId, experimentName }: { projectId?: string; experimentName?: string }) => {
+    // projectId XOR experimentName must be provided
+    if (!projectId && !experimentName) {
+      throw new Error("Either projectId or experimentName must be provided.");
+    }
+    if (projectId && experimentName) {
+      throw new Error(
+        "Only one of projectId or experimentName should be provided."
+      );
+    }
+
+    const url = experimentName
+      ? `/drafts/download_drafts?experiment_name=${experimentName}`
+      : `/drafts/download_drafts?project_id=${projectId}`;
+
+    return fetchClient<Response>(
+      url,
       {
         method: "GET",
         mode: "cors",
@@ -80,7 +95,8 @@ const projects = {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-    }),
+    });
+  },
 
   // POST /projects/
   create: (files: FileList, onProgress: (percent: number) => void) =>
