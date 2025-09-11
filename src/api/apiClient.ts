@@ -13,7 +13,7 @@ import type {
   DraftTaskCreate,
 } from "../types";
 
-const baseURL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+const baseURL = import.meta.env.VITE_API_URL;
 
 const fetchClient = async <T>(
   url: string,
@@ -185,7 +185,7 @@ const tasks = {
 
 const scriptures = {
   // GET /scriptures/
-  getAll: (query?: string, skip: number = 0, limit: number = 100) =>
+  getAll: (query?: string, skip: number = 0, limit: number = 500) =>
     query
       ? fetchClient<Scripture[]>(
           `/scriptures/?query=${query}&skip=${skip}&limit=${limit}`
