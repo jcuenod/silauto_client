@@ -1,5 +1,7 @@
 export type TaskKind = "align" | "train" | "draft" | "extract";
 
+export type TrainMode = "ot" | "early_nt" | "nt";
+
 export type TaskStatus =
   | "queued"
   | "running"
@@ -34,6 +36,8 @@ export interface TrainTaskParams {
   source_scripture_files: string[];
   training_corpus?: string;
   lang_codes: Record<string, string>;
+  train_mode?: TrainMode;
+  related_task_ids?: string[];
   results?: { [key: string]: { [key: string]: string } };
 }
 
@@ -127,6 +131,7 @@ export interface TrainTaskCreate {
   source_scripture_files: string[];
   training_corpus: string;
   lang_codes: Record<string, string>;
+  train_mode?: TrainMode;
 }
 
 export interface DraftTaskCreate {

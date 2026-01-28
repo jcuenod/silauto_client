@@ -11,6 +11,7 @@ import type {
   TaskKind,
   AlignTaskCreate,
   TrainTaskCreate,
+  TrainMode,
   Scripture,
   ParatextProject,
 } from "../types";
@@ -60,6 +61,7 @@ export const CreateTaskForm = ({
 
   // Train task form state
   const [trainingCorpus, setTrainingCorpus] = useState<string>("");
+  const [trainMode, setTrainMode] = useState<TrainMode>("ot");
   const [langCodeOptions, setLangCodeOptions] = useState<LangCodeOption[]>([]);
   const [
     selectedSourceScriptureFilesForTraining,
@@ -213,16 +215,18 @@ export const CreateTaskForm = ({
           training_corpus: trainingCorpus,
           source_scripture_files: selectedSourceScriptureFilesForTraining,
           lang_codes: getLangCodesMapping(),
+          train_mode: trainMode,
         };
         console.log("Creating train task:", trainData);
-        await api.tasks.createTrain(trainData);
-        setSuccess("Train task created successfully!");
+        const tasks = await api.tasks.createTrain(trainData);
+        setSuccess(`${tasks.length} train task${tasks.length > 1 ? "s" : ""} created successfully!`);
       }
 
       // Reset form
       setSelectedSourceScriptureFilesForAlignment([]);
       setSelectedSourceScriptureFilesForTraining([]);
       setTrainingCorpus("");
+      setTrainMode("ot");
       setLangCodeOptions([]);
 
       onTaskCreated?.();
@@ -337,6 +341,21 @@ export const CreateTaskForm = ({
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 Leave blank for all
               </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Train Mode
+              </label>
+              <select
+                value={trainMode}
+                onChange={(e) => setTrainMode(e.target.value as TrainMode)}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md dark:bg-slate-800"
+              >
+                <option value="ot">Old Testament (OT)</option>
+                <option value="nt">New Testament (NT)</option>
+                <option value="early_nt">Early New Testament</option>
+              </select>
             </div>
 
             <div>

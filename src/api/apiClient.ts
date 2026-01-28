@@ -164,7 +164,7 @@ const tasks = {
 
   // POST /tasks/train_task
   createTrain: (data: TrainTaskCreate) =>
-    fetchClient(`/tasks/train_task`, {
+    fetchClient<Task[]>(`/tasks/train_task`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
