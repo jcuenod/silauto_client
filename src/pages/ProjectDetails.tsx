@@ -162,6 +162,34 @@ const TrainTaskCard = ({
         (+task.parameters.results![b]["BLEU"] || 0)
     )
     .at(-1);
+  
+  const bleu = key ? task.parameters.results?.[key]?.["BLEU"] : undefined;
+  const chrf3 = key ? task.parameters.results?.[key]?.["chrF3"] : undefined;
+  const confidence = key ? task.parameters.results?.[key]?.["confidence"] : undefined;
+
+  const Results = () => (
+    <div className="my-2">
+      {bleu || chrf3 || confidence ? (
+        <>
+          <p className="text-slate-500">{key}</p>
+          <p>
+            <strong>BLEU:</strong>
+            {" " + bleu}
+          </p>
+          <p>
+            <strong>ChrF3:</strong>
+            {" " + chrf3}
+          </p>
+          <p>
+            <strong>Confidence:</strong>
+            {" " + confidence}
+          </p>
+        </>
+      ) : (
+        "No results (perhaps no val set)"
+      )}
+    </div>
+  );
 
   useEffect(() => {
     api.scriptures.getAll(task.parameters.target_scripture_file).then((s) => {
@@ -170,10 +198,6 @@ const TrainTaskCard = ({
       }
     });
   }, [task]);
-
-  if (!key) {
-    return <></>;
-  }
 
   return (
     <div
@@ -196,17 +220,7 @@ const TrainTaskCard = ({
           <p className="text-slate-600 dark:text-slate-400 mb-4 font-bold">
             {task.parameters.experiment_name}
           </p>
-          <div className="my-2">
-            <p className="text-slate-500">{key}</p>
-            <p>
-              <strong>BLEU:</strong>
-              {" " + task.parameters.results?.[key]?.["BLEU"]}
-            </p>
-            <p>
-              <strong>ChrF3:</strong>
-              {" " + task.parameters.results?.[key]?.["chrF3"]}
-            </p>
-          </div>
+          <Results />
           <p>
             <strong>Created:</strong> {formatDate(task.created_at)}
           </p>
